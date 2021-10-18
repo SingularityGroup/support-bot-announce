@@ -2,6 +2,7 @@
   (:gen-class)
   (:require
    [clojure.data.json :as json]
+   [clojure.string :as str]
    [fierycod.holy-lambda.response :as hr]
    [fierycod.holy-lambda.agent :as agent]
    [fierycod.holy-lambda.core :as h]
@@ -9,6 +10,63 @@
    [org.singularity-group.bot-announce.util :refer [when-let*]]))
 
 (set! *warn-on-reflection* true)
+
+(def emoji-happy-girl
+  (discord/mention-emoji
+   {:name "VoHiYo", :id "586548388829593611"}))
+
+(def emoji-gold-chest
+  (discord/mention-emoji
+   {:name "DankLoot", :id "586215241046556672"}))
+
+(def emoji-star
+  (discord/mention-emoji
+   {:name "OneStar", :id "585532547522625546"}))
+
+(def emoji-vote-up
+  (discord/mention-emoji
+   {:name "VoteUp" , :id "585532001646280734"}))
+
+(defn emojis*
+  "Get `n` random emojis."
+  [n]
+  (->>
+   [emoji-happy-girl emoji-gold-chest emoji-star emoji-vote-up]
+   cycle
+   (random-sample 0.20)
+   (take n)))
+
+(defn emojis
+  "Get `n` random emojis."
+  [n]
+  (str/join  (emojis* n)))
+
+(defn announce-in-thread
+  "Put verion fix message in `thread`."
+  [thread]
+  (discord/message
+   thread
+   {:content
+    (format
+     "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
+     (emojis 4)
+     "x.x"
+     (emojis 3))}))
+
+
+(defn announce-to-ticket-creators* [version project]
+
+  )
+
+(defn announce-to-ticket-creators [gitlab-data]
+  ;; get version
+  ;; tickets from jira
+  ;; discord threads from tickets
+  ;; make messages
+  )
+
+
+
 
 (defn
   BotAnnounceLambda
@@ -19,7 +77,8 @@
   ;; todo
   #_(when (= "token" (:token queryStringParameters)))
 
-  (hr/text event)
+
+  (hr/text (with-out-str (prn request)))
 
   ;; (let [event
   ;;       (json/read-str
@@ -46,4 +105,7 @@
 
 (comment
   (def dd (clojure.edn/read-string (slurp "/tmp/example.edn")))
-  (status-update-msg (update-in dd [:issue :key] (constantly "AUT-38"))))
+
+  (announce-in-thread "897475380464730184")
+
+  )

@@ -77,6 +77,20 @@
    :method :post
    :body (json/json-str opts)))
 
+;; thanks https://github.com/IGJoshua/discljord
+(defn mention-emoji
+  "Takes an emoji object or a custom emoji id and returns a mention of that emoji for use in messages.
+
+  A provided emoji object may also represent a regular unicode emoji with just a name,
+  in which case that name will be returned."
+  [emoji]
+  (if (map? emoji)
+    (let [{:keys [animated name id]} emoji]
+      (if id
+        (str \< (if animated \a "") \: name \: id \>)
+        name))
+    (str "<:_:" emoji \>)))
+
 (comment
   (let [dm (:id (create-dm "240081690058424320"))]
     (message
@@ -94,4 +108,8 @@
      (str
       (format "Your ticket [%s] was moved to done! " ticket-key)
       "The fix will be included in the upcomming release versions. "
-      "Let us know when you still experience the issue."))))
+      "Let us know when you still experience the issue.")))
+
+  ;; (message)
+
+  )

@@ -64,7 +64,7 @@
 
                         ;; Native runtimes have a special environment variable $Entrypoint which is available during code execution
                         ;; :entrypoint should always point to a namespace with includes (h/entrypoint) call
-                        :entrypoint                com.company.example-lambda.core
+                        :entrypoint                org.singularity-group.bot-announce.core
 
                         ;; For `:native` runtime you can provide your own bootstrap file
                         :bootstrap-file            "bootstrap"

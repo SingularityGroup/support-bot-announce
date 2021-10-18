@@ -1,4 +1,4 @@
-{:name "com.company.example-lambda.core.ExampleLambda",
+{:name "org.singularity-group.bot-announce.core.BotAnnounceLambda",
  :request {:event {:pathParameters {:message "Hello world"}},
            :ctx {}},
  :propagate true}
