@@ -1,15 +1,47 @@
-(ns org.singularity-group.bot-announce.core
-  (:gen-class)
-  (:require
-   [clojure.data.json :as json]
-   [clojure.string :as str]
-   [fierycod.holy-lambda.response :as hr]
-   [fierycod.holy-lambda.agent :as agent]
-   [fierycod.holy-lambda.core :as h]
-   [org.singularity-group.bot-announce.discord :as discord]
-   [org.singularity-group.bot-announce.util :refer [when-let*]]))
+(ns
+    org.singularity-group.bot-announce.core
+    (:gen-class)
+    (:require
+     [clojure.data.json :as json]
+     [clojure.string :as str]
+     [fierycod.holy-lambda.response
+      :as
+      hr]
+     [fierycod.holy-lambda.agent
+      :as
+      agent]
+     [fierycod.holy-lambda.core
+      :as
+      h]
+     [org.singularity-group.bot-announce.config
+      :refer
+      [config]]
+     [org.singularity-group.bot-announce.discord
+      :as
+      discord]
+     [org.singularity-group.bot-announce.jira
+      :as
+      jira]
+     [org.singularity-group.bot-announce.util
+      :refer
+      [when-let*]]))
 
 (set! *warn-on-reflection* true)
+
+(defn
+  version*
+  [msg]
+  (when-let
+      [[_ v]
+       (re-find
+        #"v([\d\.]+) incoming"
+        msg)]
+      v))
+
+(defn gitlab-version [{:keys [commits]}]
+  (some
+   #(version* (:message %))
+   commits))
 
 (def emoji-happy-girl
   (discord/mention-emoji
@@ -43,56 +75,50 @@
 
 (defn announce-in-thread
   "Put verion fix message in `thread`."
-  [thread]
+  [version thread]
   (discord/message
    thread
    {:content
     (format
      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
      (emojis 4)
-     "x.x"
+     version
      (emojis 3))}))
 
-
-(defn announce-to-ticket-creators* [version project]
-
-  )
-
-(defn announce-to-ticket-creators [gitlab-data]
-  ;; get version
-  ;; tickets from jira
-  ;; discord threads from tickets
-  ;; make messages
-  )
-
-
-
+(defn announce-to-ticket-creators
+  ([gitlab-data]
+   (let [version (gitlab-version data)
+         project (get-in config [:jira :project])]
+     (announce-to-ticket-creators
+      version project)))
+  ([version project]
+   (run! #(announce-in-thread version %)
+         (jira/discord-threads version project))))
 
 (defn
   BotAnnounceLambda
   ""
-  [{:keys [event ctx queryStringParameters] :as request}]
-  (println "string params: " queryStringParameters)
-
-  ;; todo
-  #_(when (= "token" (:token queryStringParameters)))
-
-
-  (hr/text (with-out-str (prn request)))
-
-  ;; (let [event
-  ;;       (json/read-str
-  ;;        (:body event)
-  ;;        :key-fn
-  ;;        keyword)]
-  ;;   (when
-  ;;       (=
-  ;;        "jira:issue_updated"
-  ;;        (:webhookEvent event))
-  ;;       (status-update-msg (ddb/connect-db) event))
-  ;;   (hr/text "ok"))
-
-  )
+  [{:keys [event ctx headers] :as request}]
+  (if
+      (or
+       (=
+        (headers "x-gitlab-token")
+        (get-in
+         config
+         [:gitlab :webhook-token]))
+       (=
+        (headers "x-support-bot-admin-token")
+        (get-in
+         config
+         [:gitlab :debug-token])))
+      (let [event
+            (json/read-str
+             (:body event)
+             :key-fn keyword)]
+        (announce-to-ticket-creators event)
+        (hr/text "Success."))
+      (hr/not-found "Token invalid"))
+  (hr/text (with-out-str (prn request))))
 
 ;; Specify the Lambda's entry point as a static main function when generating a class file
 
@@ -108,4 +134,22 @@
 
   (announce-in-thread "897475380464730184")
 
-  )
+  (let [project "BEN" version "26.0.0"]
+    (announce-to-ticket-creators version project))
+
+  (def data
+    (clojure.edn/read-string
+     (slurp "/tmp/example-gitlab.edn")))
+
+  (let [data
+        (select-keys data [:commits])]
+    data
+    ;; (gitlab-version data)
+    )
+
+  (spit
+   "/tmp/gl-debug-commit-d"
+   (json/write-str
+    {:body
+     {:commits
+      [{:message "v26.0.0 incoming"}]}})))

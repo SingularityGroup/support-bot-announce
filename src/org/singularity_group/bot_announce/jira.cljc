@@ -26,7 +26,7 @@
    :body
    (json/read-str :key-fn keyword)))
 
-(defn discord-threads
+(defn- discord-threads*
   [project version]
   (:issues
    (jql-query
@@ -34,7 +34,7 @@
             project
             version))))
 
-(defn tickets-discord-threads [issues]
+(defn- tickets-discord-threads [issues]
   (for
       [{{discord-link :customfield_10046} :fields}
        issues
@@ -46,7 +46,13 @@
        :when thread]
     thread))
 
-
+(defn
+  discord-threads
+  [project version]
+  (tickets-discord-threads
+   (discord-threads*
+    version
+    project)))
 
 (comment
   (def issues
@@ -56,7 +62,7 @@
           version "1.70"
           ;; version "40.0.0"
           ]
-      (discord-threads project version)))
+      (discord-threads* project version)))
 
   (tickets-discord-threads issues)
 
