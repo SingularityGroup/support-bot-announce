@@ -33,3 +33,4 @@ template-modified.yml
 /.cpcache/
 /.lsp/
 /resources/tokens.edn
+/resources/native-configuration/

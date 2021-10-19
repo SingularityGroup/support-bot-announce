@@ -2,7 +2,7 @@
         {:git/url                                   "https://github.com/FieryCod/holy-lambda"
          :deps/root                                 "./modules/holy-lambda-babashka-tasks"
          :sha                                       "99fb7c975498945551e1ed8651f9017532be0a58"}
-        http-kit/http-kit {:mvn/version "2.5.3"}
+        http-kit/http-kit {:mvn/version "2.6.0-alpha1"}
         org.clojure/data.json {:mvn/version "2.4.0"}}
 
  ;; Local repositories should be downloaded to `.holy-lambda` directory
@@ -82,7 +82,9 @@
                                                     "-H:+AllowIncompleteClasspath"
                                                     "--no-server"
                                                     "--initialize-at-build-time"
-                                                    "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory$SSLHolder"]}}
+                                                    "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory$SSLHolder"
+                                                    "--trace-object-instantiation=java.security.SecureRandom"
+                                                    ]}}
 
 
 

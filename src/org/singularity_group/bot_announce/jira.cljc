@@ -59,8 +59,6 @@
     version
     project)))
 
-(agent/in-context
- (try (client/request {}) (catch Exception _)))
 
 ;; (comment
 ;;   (def issues

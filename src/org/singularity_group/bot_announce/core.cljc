@@ -76,9 +76,9 @@
    {:content
     (format
      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-     @emojis
+     (str/join @emojis)
      version
-     @emojis)}))
+     (str/join @emojis))}))
 
 (defn announce-to-ticket-creators
   ([data]
@@ -93,7 +93,7 @@
 (defn
   BotAnnounceLambda
   ""
-  [{:keys [event ctx headers] :as request}]
+  [{{:keys [headers] :as event} :event :keys [ctx] :as request}]
   (if
       (and
        headers
@@ -104,12 +104,10 @@
           config
           [:gitlab :webhook-token]))
         (=
-         (doto
-             (headers "x-support-bot-admin-token")
-           prn)
+         (headers "x-support-bot-admin-token")
          (get-in
           config
-          [:gitlab :debug-token]))))
+          [:gitlab :x-support-bot-admin-token]))))
       (let [event
             (json/read-str
              (:body event)
@@ -124,31 +122,32 @@
 ;; Executes the body in a safe agent context for native configuration generation.
 ;; Useful when it's hard for agent payloads to cover all logic branches.
 
-(agent/in-context
+(agent/in-context)
 
+(comment
+  (def dd (clojure.edn/read-string (slurp "/tmp/example.edn")))
 
- )
+  (announce-in-thread "897475380464730184")
 
-;; (comment
-;;   (def dd (clojure.edn/read-string (slurp "/tmp/example.edn")))
+  (let [project "BEN" version "26.0.0"]
+    (announce-to-ticket-creators version project))
 
-;;   (announce-in-thread "897475380464730184")
+  (announce-to-ticket-creators
+   {:commits
+    [{:message "v26.0.0 incoming"}]})
 
-;;   (let [project "BEN" version "26.0.0"]
-;;     (announce-to-ticket-creators version project))
+  (def data
+    (clojure.edn/read-string
+     (slurp "/tmp/example-gitlab.edn")))
 
-;;   (def data
-;;     (clojure.edn/read-string
-;;      (slurp "/tmp/example-gitlab.edn")))
+  (let [data
+        (select-keys data [:commits])]
+    data
+    ;; (gitlab-version data)
+    )
 
-;;   (let [data
-;;         (select-keys data [:commits])]
-;;     data
-;;     ;; (gitlab-version data)
-;;     )
-
-;;   (print
-;;    (json/json-str
-;;     {:commits
-;;      [{:message "v26.0.0 incoming"}]}))
-;;   )
+  (print
+   (json/json-str
+    {:commits
+     [{:message "v26.0.0 incoming"}]}))
+  )

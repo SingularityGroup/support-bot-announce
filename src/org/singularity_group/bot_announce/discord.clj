@@ -7,6 +7,9 @@
       :refer
       [config]]))
 
+
+(set! *warn-on-reflection* true)
+
 (defn
   rest-api
   [point & {:as opts}]
