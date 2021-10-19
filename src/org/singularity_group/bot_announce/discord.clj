@@ -77,6 +77,8 @@
    :method :post
    :body (json/json-str opts)))
 
+(set! *warn-on-reflection* true)
+
 ;; thanks https://github.com/IGJoshua/discljord
 (defn mention-emoji
   "Takes an emoji object or a custom emoji id and returns a mention of that emoji for use in messages.
@@ -95,21 +97,4 @@
   (let [dm (:id (create-dm "240081690058424320"))]
     (message
      dm
-     :content "yea bois"))
-  (let [user-id
-        "240081690058424320"
-        ticket-key
-        "AUT-38"
-        dm
-        (:id (create-dm user-id))]
-    (message
-     dm
-     :content
-     (str
-      (format "Your ticket [%s] was moved to done! " ticket-key)
-      "The fix will be included in the upcomming release versions. "
-      "Let us know when you still experience the issue.")))
-
-  ;; (message)
-
-  )
+     :content "yea bois")))

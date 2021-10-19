@@ -1,11 +1,16 @@
 (ns
     org.singularity-group.bot-announce.jira
     (:require
+     [fierycod.holy-lambda.agent
+      :as
+      agent]
      [org.httpkit.client :as client]
      [clojure.data.json :as json]
      [org.singularity-group.bot-announce.config
       :refer
       [config]]))
+
+(set! *warn-on-reflection* true)
 
 (defn req [url]
   (let [config (:jira config)]
@@ -54,16 +59,19 @@
     version
     project)))
 
-(comment
-  (def issues
-    (let [
-          project "BEN"
-          ;; project "COS"
-          version "1.70"
-          ;; version "40.0.0"
-          ]
-      (discord-threads* project version)))
+(agent/in-context
+ (try (client/request {}) (catch Exception _)))
 
-  (tickets-discord-threads issues)
+;; (comment
+;;   (def issues
+;;     (let [
+;;           project "BEN"
+;;           ;; project "COS"
+;;           version "1.70"
+;;           ;; version "40.0.0"
+;;           ]
+;;       (discord-threads* project version)))
 
-  )
+;;   (tickets-discord-threads issues)
+
+;;   )

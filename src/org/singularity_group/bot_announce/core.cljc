@@ -59,19 +59,14 @@
   (discord/mention-emoji
    {:name "VoteUp" , :id "585532001646280734"}))
 
-(defn emojis*
-  "Get `n` random emojis."
-  [n]
-  (->>
-   [emoji-happy-girl emoji-gold-chest emoji-star emoji-vote-up]
-   cycle
-   (random-sample 0.20)
-   (take n)))
-
-(defn emojis
-  "Get `n` random emojis."
-  [n]
-  (str/join  (emojis* n)))
+(def emojis
+  (delay
+    (->>
+     [emoji-gold-chest emoji-happy-girl emoji-star emoji-vote-up]
+     cycle
+     (random-sample 0.20)
+     (take
+      (+ 3 (rand-int 2))))))
 
 (defn announce-in-thread
   "Put verion fix message in `thread`."
@@ -81,12 +76,12 @@
    {:content
     (format
      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-     (emojis 4)
+     @emojis
      version
-     (emojis 3))}))
+     @emojis)}))
 
 (defn announce-to-ticket-creators
-  ([gitlab-data]
+  ([data]
    (let [version (gitlab-version data)
          project (get-in config [:jira :project])]
      (announce-to-ticket-creators
@@ -100,25 +95,28 @@
   ""
   [{:keys [event ctx headers] :as request}]
   (if
-      (or
-       (=
-        (headers "x-gitlab-token")
-        (get-in
-         config
-         [:gitlab :webhook-token]))
-       (=
-        (headers "x-support-bot-admin-token")
-        (get-in
-         config
-         [:gitlab :debug-token])))
+      (and
+       headers
+       (or
+        (=
+         (headers "x-gitlab-token")
+         (get-in
+          config
+          [:gitlab :webhook-token]))
+        (=
+         (doto
+             (headers "x-support-bot-admin-token")
+           prn)
+         (get-in
+          config
+          [:gitlab :debug-token]))))
       (let [event
             (json/read-str
              (:body event)
              :key-fn keyword)]
         (announce-to-ticket-creators event)
         (hr/text "Success."))
-      (hr/not-found "Token invalid"))
-  (hr/text (with-out-str (prn request))))
+      (hr/not-found "Token invalid")))
 
 ;; Specify the Lambda's entry point as a static main function when generating a class file
 
@@ -127,29 +125,30 @@
 ;; Useful when it's hard for agent payloads to cover all logic branches.
 
 (agent/in-context
- (println "I will help in generation of native-configurations"))
 
-(comment
-  (def dd (clojure.edn/read-string (slurp "/tmp/example.edn")))
 
-  (announce-in-thread "897475380464730184")
+ )
 
-  (let [project "BEN" version "26.0.0"]
-    (announce-to-ticket-creators version project))
+;; (comment
+;;   (def dd (clojure.edn/read-string (slurp "/tmp/example.edn")))
 
-  (def data
-    (clojure.edn/read-string
-     (slurp "/tmp/example-gitlab.edn")))
+;;   (announce-in-thread "897475380464730184")
 
-  (let [data
-        (select-keys data [:commits])]
-    data
-    ;; (gitlab-version data)
-    )
+;;   (let [project "BEN" version "26.0.0"]
+;;     (announce-to-ticket-creators version project))
 
-  (spit
-   "/tmp/gl-debug-commit-d"
-   (json/write-str
-    {:body
-     {:commits
-      [{:message "v26.0.0 incoming"}]}})))
+;;   (def data
+;;     (clojure.edn/read-string
+;;      (slurp "/tmp/example-gitlab.edn")))
+
+;;   (let [data
+;;         (select-keys data [:commits])]
+;;     data
+;;     ;; (gitlab-version data)
+;;     )
+
+;;   (print
+;;    (json/json-str
+;;     {:commits
+;;      [{:message "v26.0.0 incoming"}]}))
+;;   )

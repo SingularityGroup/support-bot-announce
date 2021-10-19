@@ -81,7 +81,8 @@
                                                     "--report-unsupported-elements-at-runtime"
                                                     "-H:+AllowIncompleteClasspath"
                                                     "--no-server"
-                                                    "--initialize-at-build-time"]}}
+                                                    "--initialize-at-build-time"
+                                                    "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory$SSLHolder"]}}
 
 
 
