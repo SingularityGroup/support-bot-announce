@@ -1,0 +1,5 @@
+{:discord
+ {:announce-thread
+  {:test "900424064219381761"
+   :prod "893184019318071346"}}
+ :prod false}

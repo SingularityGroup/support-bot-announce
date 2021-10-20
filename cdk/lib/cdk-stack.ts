@@ -18,13 +18,13 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
       handler: "org.singularity-group.bot-announce.core.BotAnnounceLambda",
     });
 
-    const api = new apigateway.RestApi(this, "support-bot-jira-status", {
+    const api = new apigateway.RestApi(this, "support-bot-announce", {
       restApiName: "Support Bot Jira Status Webhook",
       description: "Send message to discord channels when ticket status changes."
     });
 
-    const SayHelloMethod = new apigateway.LambdaIntegration(handler);
-    api.root.addMethod("POST", SayHelloMethod);
+    const BotAnnounceMethod = new apigateway.LambdaIntegration(handler);
+    api.root.addMethod("POST", BotAnnounceMethod);
 
   }
 }
