@@ -16,7 +16,7 @@
       h]
      [org.singularity-group.bot-announce.config
       :refer
-      [config prod-key]]
+      [config]]
      [org.singularity-group.bot-announce.discord
       :as
       discord]
@@ -50,8 +50,7 @@
    [emoji-gold-chest emoji-happy-girl emoji-star emoji-vote-up]
    cycle
    (random-sample 0.20)
-   (take
-    n)
+   (take n)
    str/join))
 
 (defn
@@ -89,15 +88,18 @@
      version
      (emojis 3))}))
 
-(defn announce-to-ticket-creators
-  ([data]
-   (let [version (gitlab-version data)
-         project (get-in config [:jira :project])]
-     (announce-to-ticket-creators
-      version project)))
-  ([version project]
-   (run! #(announce-in-thread version %)
-         (jira/discord-threads version project))))
+  "M-h" #'consult-history
+(defn
+  announce-to-ticket-creators
+  [{{:keys [version]} :version-announce}]
+  (let [project (get-in
+                 config
+                 [:jira :project])]
+    (run!
+     #(announce-in-thread version %)
+     (jira/discord-threads
+      version
+      project))))
 
 (defn
   BotAnnounceLambda
@@ -110,11 +112,16 @@
         (headers "x-support-bot-admin-token")
         (get-in
          config
-         [:gitlab :x-support-bot-admin-token])))
-      (let [event
+         [:support-bot :token])
+        (get-in
+         config
+         [:support-bot :token])))
+      (let [payload
             (edn/read-string
              (:body event))]
-        (announce-to-ticket-creators event)
+        (announce-to-ticket-creators payload)
+        (announce-in-public-thread
+         (:version-announce payload))
         (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
@@ -124,9 +131,11 @@
 
 (comment
   (announce-in-thread "897475380464730184")
-  (def payload (edn/read-string (slurp "/tmp/spb.edn")))
-  (announce-to-ticket-creators)
+  (def payload (edn/read-string (slurp "/tmp/spb.edn"))) (announce-to-ticket-creators event)
   (announce-in-public-thread
    (:version-announce payload))
+  (announce-to-ticket-creators
+   {:version-announce
+    {:version "26.0.0"}})
   (let [project "BEN" version "26.0.0"]
     (announce-to-ticket-creators version project)))
