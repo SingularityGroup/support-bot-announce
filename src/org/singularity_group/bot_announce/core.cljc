@@ -88,10 +88,9 @@
      version
      (emojis 3))}))
 
-  "M-h" #'consult-history
 (defn
   announce-to-ticket-creators
-  [{{:keys [version]} :version-announce}]
+  [version]
   (let [project (get-in
                  config
                  [:jira :project])]
@@ -116,13 +115,16 @@
         (get-in
          config
          [:support-bot :token])))
-      (let [payload
-            (edn/read-string
-             (:body event))]
-        (announce-to-ticket-creators payload)
-        (announce-in-public-thread
-         (:version-announce payload))
-        (hr/text "Success."))
+      (let
+          [payload
+           (edn/read-string
+            (:body event))
+           d (:cos-version/release payload)]
+          (announce-in-public-thread d)
+          (when (:all-released? d)
+            (announce-to-ticket-creators
+             (:version d)))
+          (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
 (h/entrypoint [#'BotAnnounceLambda])
@@ -131,11 +133,19 @@
 
 (comment
   (announce-in-thread "897475380464730184")
-  (def payload (edn/read-string (slurp "/tmp/spb.edn"))) (announce-to-ticket-creators event)
+  (def payload (edn/read-string (slurp "/tmp/spb.edn")))
+
+  (let [d (:cos-version/release payload)
+        d (assoc d :version "1.70")]
+    (announce-in-public-thread d)
+    (when (:all-released? d)
+      (announce-to-ticket-creators
+       (:version d))))
+
   (announce-in-public-thread
-   (:version-announce payload))
-  (announce-to-ticket-creators
-   {:version-announce
-    {:version "26.0.0"}})
+   (:cos-version/release payload))
+
+  (announce-to-ticket-creators "26.0.0")
+
   (let [project "BEN" version "26.0.0"]
     (announce-to-ticket-creators version project)))
