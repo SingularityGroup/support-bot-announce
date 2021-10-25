@@ -77,7 +77,7 @@
          (emojis 6))})))
 
 (defn announce-in-thread
-  "Put verion fix message in `thread`."
+  "Put verion fix-version message in `thread`."
   [version thread]
   (discord/message
    thread
@@ -101,6 +101,43 @@
       project))))
 
 (defn
+  announce-in-log-thread
+  [version]
+  (discord/message
+   (get-in config [:discord :log-channel])
+   {:content
+    (format
+     "Announced on all stores: %s"
+     version)}))
+
+(defn bot-log-msgs []
+    (discord/messages
+      (get-in config [:discord :log-channel])))
+
+(defn parse-version [msg]
+  (when-let
+      [[_ version]
+       (re-find
+        #"Announced on all stores: ([\d\.]+)"
+        msg)]
+      version))
+
+(defn announced-versions [msgs]
+    (into
+     #{}
+     (comp
+      (keep :content)
+      (keep parse-version))
+     msgs))
+
+(defn
+  announced?
+  [version]
+  ((announced-versions
+    (bot-log-msgs))
+   version))
+
+(defn
   BotAnnounceLambda
   ""
   [{{:keys [headers] :as event} :event :keys [ctx] :as request}]
@@ -109,9 +146,6 @@
        headers
        (=
         (headers "x-support-bot-admin-token")
-        (get-in
-         config
-         [:support-bot :token])
         (get-in
          config
          [:support-bot :token])))
@@ -127,13 +161,71 @@
           (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
-(h/entrypoint [#'BotAnnounceLambda])
+
+;; jira status --
+
+(defn thread-served? [thread] false)
+
+(defn parse-discord [field]
+  (and field
+       (when-let
+           [[_ thread]
+            (re-find
+             #"^discord://discord.com/channels/\d+/(\d+)"
+             field)]
+           thread)))
+
+(defn
+  announce-when-released-and-fixed
+  [{{{discord (get-in
+               config
+               [:jira :discord-field])
+      [{fix-version :name}] :fixVersions} :fields} :issue}]
+  (when-let [thread (parse-discord discord)]
+      (and
+       fix-version
+       (not (thread-served? thread))
+       (announced? fix-version))
+      (announce-in-thread fix-version thread)))
+
+(defn
+  JiraStatusLambda
+  ""
+  [{:keys [event ctx queryStringParameters] :as request}]
+  (println "string params: " queryStringParameters)
+  ;; todo
+  #_(when (= "token" (:token queryStringParameters)))
+  (let [jira-event
+        (json/read-str
+         (:body event)
+         :key-fn
+         keyword)]
+    (when
+        (=
+         "jira:issue_updated"
+         (:webhookEvent event))
+        (announce-when-released-and-fixed event))
+    (hr/text "ok")))
+
+;; end
+
+(h/entrypoint [#'BotAnnounceLambda #'JiraStatusLambda])
 
 (agent/in-context)
 
 (comment
-  (announce-in-thread "897475380464730184")
+  (announced-versions
+   (bot-log-msgs))
+
+  (announced? "1337")
+
+  (announce-in-log-thread "1337")
+
+  (announce-in-thread "1337" "902167426249146398")
+
   (def payload (edn/read-string (slurp "/tmp/spb.edn")))
+
+  (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn" )))
 
   (let [d (:cos-version/release payload)
         d (assoc d :version "1.70")]

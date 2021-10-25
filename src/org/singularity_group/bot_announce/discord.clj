@@ -80,6 +80,36 @@
    :method :post
    :body (json/json-str opts)))
 
+(defn messages [channel-id]
+  (rest-api
+   (format
+    "/channels/%s/messages"
+    channel-id)))
+
+(defn bot-msg [{:keys [content] {id :id} :author}]
+  (and
+   (= id (get-in config [:discord :bot-id]))
+   content))
+
+(defn fix-msgs [msgs]
+  (into
+   []
+   (comp
+    (keep
+     bot-msg)
+    (filter
+     (partial
+      re-find
+      #"This issue has been fixed on version")))
+   msgs))
+
+(defn fix-msg?
+  "Return true when our bot already put a fix message in `thread`."
+  [thread]
+  (some?
+   (fix-msgs
+    (messages thread))))
+
 (set! *warn-on-reflection* true)
 
 ;; thanks https://github.com/IGJoshua/discljord
@@ -100,4 +130,16 @@
   (let [dm (:id (create-dm "240081690058424320"))]
     (message
      dm
-     :content "yea bois")))
+     :content "yea bois"))
+
+  (def channel-id "902167426249146398")
+
+
+  (messages "898962261647953950")
+
+  (def msgs (messages channel-id))
+
+  (bot-msg (first msgs))
+
+
+  )

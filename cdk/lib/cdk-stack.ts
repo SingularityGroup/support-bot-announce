@@ -10,7 +10,10 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
 
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const api = new apigateway.RestApi(this, "support-bot-announce", {
+      restApiName: "Support Bot Webhooks",
+      description: "Handle new version releases and jira ticket fixes."
+    });
 
     const handler = new lambda.Function(this, "SupportBotVersionAnnounceFn", {
       runtime: lambda.Runtime.PROVIDED,
@@ -18,13 +21,24 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
       handler: "org.singularity-group.bot-announce.core.BotAnnounceLambda",
     });
 
-    const api = new apigateway.RestApi(this, "support-bot-announce", {
-      restApiName: "Support Bot Jira Status Webhook",
-      description: "Send message to discord channels when ticket status changes."
+    const BotAnnounce = new apigateway.LambdaIntegration(handler);
+    api.root.addMethod("POST");
+    const announceResource = api.root.addResource("slack-announce", {
+      defaultIntegration: BotAnnounce
+    })
+    announceResource.addMethod("POST", BotAnnounce)
+
+    const jiraHandler = new lambda.Function(this, "SupportBotJiraStatusFn", {
+      runtime: lambda.Runtime.PROVIDED,
+      code: lambda.Code.fromAsset('../.holy-lambda/build/latest.zip'),
+      handler: "org.singularity-group.bot-announce.core.JiraStatusLambda",
     });
 
-    const BotAnnounceMethod = new apigateway.LambdaIntegration(handler);
-    api.root.addMethod("POST", BotAnnounceMethod);
+    const JiraStatusMethod = new apigateway.LambdaIntegration(jiraHandler);
+    const jiraResource = api.root.addResource("jira-status", {
+      defaultIntegration: JiraStatusMethod
+    })
+    jiraResource.addMethod("POST", JiraStatusMethod)
 
   }
 }
