@@ -190,25 +190,23 @@
                [:jira :discord-field])
       [{fix-version :name}] :fixVersions} :fields} :issue}]
   (when-let [thread (parse-discord discord)]
-    (println "thread: " thread "fix version: "  fix-version )
-      (and
-       fix-version
-       (doto (not (thread-served? thread)) println)
-       (doto (announced? fix-version) println))
-      (announce-in-thread fix-version thread)))
+    (println "thread: " thread "fix version: "  fix-version)
+    (when
+        (and
+         fix-version
+         (not (thread-served? thread))
+         (announced? fix-version))
+        (announce-in-thread fix-version thread))))
 
 (defn
   JiraStatusLambda
   ""
-  [{:keys [event
-           ctx
-           queryStringParameters]
-    :as request}]
+  [{:keys [event ctx]
+     :as request}]
   (prn request)
   (if
       (=
-       (:sgtoken
-        queryStringParameters)
+       (get-in event [:queryStringParameters :sgtoken])
        (get-in
         config
         [:jira :hook-token]))
@@ -250,7 +248,7 @@
   (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn")))
   (def jira-payload (edn/read-string (slurp "/tmp/example-jira-update.edn")))
 
-(announce-when-released-and-fixed jira-payload)
+  (announce-when-released-and-fixed jira-payload)
 
   (announce-when-released-and-fixed (assoc-in
                                      jira-payload
@@ -274,4 +272,16 @@
   (announce-to-ticket-creators "26.0.0")
 
   (let [project "BEN" version "26.0.0"]
-    (announce-to-ticket-creators version project)))
+    (announce-to-ticket-creators version project))
+
+
+  (def ben-9-thread "902167426249146398")
+  (not (thread-served? ben-9-thread))
+
+
+  (def req
+    {:event {:path "/jira-status", :queryStringParameters {:sgtoken "fo"}}})
+
+  (let [{:keys [event ctx] :as request} req]
+    event
+    (get-in event [:queryStringParameters :sgtoken])))

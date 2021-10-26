@@ -33,10 +33,12 @@
 (make-hook
  {:url
   (str
-   (config get-in [:jira :status-webhook-url])
+   (get-in config [:jira :status-webhook-url])
+   "?"
    "sgtoken="
-
-   )
+   (get-in
+    config
+    [:jira :hook-token]))
   :filters
   {:issue-related-events-section
    "resolution is not EMPTY and Project = BEN"}})
