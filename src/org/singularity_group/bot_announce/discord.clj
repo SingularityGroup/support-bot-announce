@@ -103,13 +103,6 @@
       #"This issue has been fixed on version")))
    msgs))
 
-(defn fix-msg?
-  "Return true when our bot already put a fix message in `thread`."
-  [thread]
-  (some?
-   (fix-msgs
-    (messages thread))))
-
 (set! *warn-on-reflection* true)
 
 ;; thanks https://github.com/IGJoshua/discljord

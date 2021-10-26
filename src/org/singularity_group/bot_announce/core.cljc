@@ -68,25 +68,26 @@
        {:content
         (format
          "%sNew version %s has been published on the %s%s"
-         (emojis 6)
+         (emojis 1)
          version
          (case store
            "iOS" "iOS Appstore"
            "Android" "Android Playstore"
            store)
-         (emojis 6))})))
+         (emojis (inc (rand-int 2))))})))
 
 (defn announce-in-thread
   "Put verion fix-version message in `thread`."
   [version thread]
+  (println "announce in thread " version thread)
   (discord/message
    thread
    {:content
     (format
      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-     (emojis 4)
+         (emojis 1)
      version
-     (emojis 3))}))
+     (emojis (inc (rand-int 2))))}))
 
 (defn
   announce-to-ticket-creators
@@ -164,6 +165,13 @@
 
 ;; jira status --
 
+(defn thread-served?
+  "Return true when our bot already put a fix message in `thread`."
+  [thread]
+  (seq
+   (discord/fix-msgs
+    (discord/messages thread))))
+
 (defn thread-served? [thread] false)
 
 (defn parse-discord [field]
@@ -182,10 +190,11 @@
                [:jira :discord-field])
       [{fix-version :name}] :fixVersions} :fields} :issue}]
   (when-let [thread (parse-discord discord)]
+    (println "thread: " thread "fix version: "  fix-version )
       (and
        fix-version
-       (not (thread-served? thread))
-       (announced? fix-version))
+       (doto (not (thread-served? thread)) println)
+       (doto (announced? fix-version) println))
       (announce-in-thread fix-version thread)))
 
 (defn
@@ -200,10 +209,12 @@
          (:body event)
          :key-fn
          keyword)]
+    (prn jira-event "\n")
     (when
         (=
          "jira:issue_updated"
-         (:webhookEvent event))
+         (doto (:webhookEvent event)
+           (println " - webhook event")))
         (announce-when-released-and-fixed event))
     (hr/text "ok")))
 
@@ -220,12 +231,21 @@
   (announced? "1337")
 
   (announce-in-log-thread "1337")
+  (announce-in-log-thread "26.0.1")
 
   (announce-in-thread "1337" "902167426249146398")
 
-  (def payload (edn/read-string (slurp "/tmp/spb.edn")))
+  (def jira-payload (edn/read-string (slurp "/tmp/spb.edn")))
+  (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn")))
+  (def jira-payload (edn/read-string (slurp "/tmp/example-jira-update.edn")))
 
-  (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn" )))
+(announce-when-released-and-fixed jira-payload)
+
+  (announce-when-released-and-fixed (assoc-in
+                                     jira-payload
+                                     [:fields :fixVersions]
+                                     [{:name "26.0.1"}]))
+
 
   (let [d (:cos-version/release payload)
         d (assoc d :version "1.70")]
@@ -236,6 +256,9 @@
 
   (announce-in-public-thread
    (:cos-version/release payload))
+
+  (announce-in-public-thread
+   {:version "fo" :store "Appstore"})
 
   (announce-to-ticket-creators "26.0.0")
 

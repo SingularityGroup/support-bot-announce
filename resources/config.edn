@@ -1,12 +1,8 @@
-{:jira
- {:discord-field
-  :customfield_10046}
- :discord
- {:log-channel
-  "902117406309240854"
-  :bot-id
-  "888816549689966672"
-  :announce-thread
-  {:test "900424064219381761"
-   :prod "893184019318071346"}}
+{:jira {:project "BEN"
+        :discord-field :customfield_10046
+        :status-webhook-url "https://f2eg7wtbx6.execute-api.us-east-1.amazonaws.com/prod/jira-status"}
+ :discord {:log-channel "902117406309240854"
+           :bot-id "888816549689966672"
+           :announce-thread {:test "900424064219381761"
+                             :prod "893184019318071346"}}
  :prod false}
