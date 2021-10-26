@@ -132,7 +132,4 @@
 
   (def msgs (messages channel-id))
 
-  (bot-msg (first msgs))
-
-
-  )
+  (bot-msg (first msgs)))

@@ -67,7 +67,9 @@
        channel
        {:content
         (format
-         "%sNew version %s has been published on the %s%s"
+         (str "%s New version %s has been published on the %s%s "
+              "\nIf you cannot see the update please "
+              "wait at least 2 hours or try clearing cache of your store app. ")
          (emojis 1)
          version
          (case store
@@ -172,8 +174,6 @@
    (discord/fix-msgs
     (discord/messages thread))))
 
-(defn thread-served? [thread] false)
-
 (defn parse-discord [field]
   (and field
        (when-let
@@ -200,23 +200,34 @@
 (defn
   JiraStatusLambda
   ""
-  [{:keys [event ctx queryStringParameters] :as request}]
-  (println "string params: " queryStringParameters)
-  ;; todo
-  #_(when (= "token" (:token queryStringParameters)))
-  (let [jira-event
-        (json/read-str
-         (:body event)
-         :key-fn
-         keyword)]
-    (prn jira-event "\n")
-    (when
-        (=
-         "jira:issue_updated"
-         (doto (:webhookEvent event)
-           (println " - webhook event")))
-        (announce-when-released-and-fixed event))
-    (hr/text "ok")))
+  [{:keys [event
+           ctx
+           queryStringParameters]
+    :as request}]
+  (prn request)
+  (if
+      (=
+       (:sgtoken
+        queryStringParameters)
+       (get-in
+        config
+        [:jira :hook-token]))
+      (let [payload (json/read-str
+                     (:body event)
+                     :key-fn
+                     keyword)]
+        (prn payload "\n")
+        (when
+            (=
+             "jira:issue_updated"
+             (doto
+                 (:webhookEvent payload)
+                 (println " - webhook event")))
+            (announce-when-released-and-fixed
+             payload))
+        (hr/text "ok"))
+      (hr/bad-request
+       "Singularity Group token invalid")))
 
 ;; end
 
