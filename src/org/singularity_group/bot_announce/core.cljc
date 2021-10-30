@@ -63,20 +63,19 @@
         [:discord
          :announce-thread
          :prod])]
+    (let [ios? (= "iOS" store)]
       (discord/message
        channel
        {:content
         (format
-         (str "%s New version %s has been published on the %s%s "
+         (str "%s New version %s has been published on the %s"
               "\nIf you cannot see the update please "
               "wait at least 2 hours or try clearing cache of your store app. ")
          (emojis 1)
          version
-         (case store
-           "iOS" "iOS Appstore"
-           "Android" "Android Playstore"
-           store)
-         (emojis (inc (rand-int 2))))})))
+         (if ios?
+           "iOS Appstore :green_apple:"
+           "Android Playstore :robot:"))}))))
 
 (defn announce-in-thread
   "Put verion fix-version message in `thread`."
@@ -268,6 +267,11 @@
 
   (announce-in-public-thread
    {:version "fo" :store "Appstore"})
+
+  (announce-in-public-thread
+   {:version "fo" :store "Andrid"})
+  (announce-in-public-thread
+   {:version "fo" :store "iOS"})
 
   (announce-to-ticket-creators "26.0.0")
 

@@ -123,7 +123,7 @@
   (let [dm (:id (create-dm "240081690058424320"))]
     (message
      dm
-     :content "yea bois"))
+     :content "yea bois :robot:"))
 
   (def channel-id "902167426249146398")
 
