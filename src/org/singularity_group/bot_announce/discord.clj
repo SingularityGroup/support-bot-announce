@@ -7,7 +7,6 @@
       :refer
       [config]]))
 
-
 (set! *warn-on-reflection* true)
 
 (defn
@@ -87,9 +86,10 @@
     channel-id)))
 
 (defn bot-msg [{:keys [content] {id :id} :author}]
-  (and
+  (when
    (= id (get-in config [:discord :bot-id]))
    content))
+
 
 (defn fix-msgs [msgs]
   (into
@@ -103,7 +103,12 @@
       #"This issue has been fixed on version")))
    msgs))
 
-(set! *warn-on-reflection* true)
+(defn thread-served?
+  "Return true when our bot already put a fix message in `thread`."
+  [thread]
+  (seq
+   (fix-msgs
+    (messages thread))))
 
 ;; thanks https://github.com/IGJoshua/discljord
 (defn mention-emoji
@@ -119,14 +124,18 @@
         name))
     (str "<:_:" emoji \>)))
 
+
+
+
 (comment
+
   (let [dm (:id (create-dm "240081690058424320"))]
     (message
      dm
      :content "yea bois :robot:"))
 
-  (def channel-id "902167426249146398")
 
+  (def channel-id "902167426249146398")
 
   (messages "898962261647953950")
 

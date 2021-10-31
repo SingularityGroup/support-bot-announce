@@ -103,6 +103,10 @@
           (fs/delete-on-exit ".nrepl-port")
           (deref proc))
 
+  deploy {:depends [hl:compile hl:native:executable]
+          :task
+          (shell {:dir "cdk"} "cdk deploy")}
+
   hl:docker:run             holy-lambda.tasks/hl:docker:run
 
   hl:native:conf            holy-lambda.tasks/hl:native:conf

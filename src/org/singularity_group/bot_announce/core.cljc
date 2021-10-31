@@ -76,40 +76,65 @@
          (if ios?
            "iOS Appstore :green_apple:"
            "Android Playstore :robot:"))}))))
+(defn
+  announce-in-log-thread
+  [{:keys [store version]}]
+  (let
+      [channel
+       (get-in
+        config
+        [:discord
+         :announce-thread
+         :prod])]
+    (let [ios? (= "iOS" store)]
+      (discord/message
+       channel
+       {:content
+        (format
+         (str "%s New version %s has been published on the %s"
+              "\nIf you cannot see the update please "
+              "wait at least 2 hours or try clearing cache of your store app. ")
+         (emojis 1)
+         version
+         (if ios?
+           "iOS Appstore :green_apple:"
+           "Android Playstore :robot:"))}))))
 
-(defn announce-in-thread
+(defn announce-in-thread-with-served-check!
   "Put verion fix-version message in `thread`."
   [version thread]
   (println "announce in thread " version thread)
-  (discord/message
-   thread
-   {:content
-    (format
-     "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-         (emojis 1)
-     version
-     (emojis (inc (rand-int 2))))}))
+  (when (not (discord/thread-served? thread))
+    (discord/message
+     thread
+     {:content
+      (format
+       "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
+       (emojis 1)
+       version
+       (emojis (inc (rand-int 2))))})))
 
 (defn
   announce-to-ticket-creators
-  [version]
+  [{:keys [version]}]
   (let [project (get-in
                  config
                  [:jira :project])]
     (run!
-     #(announce-in-thread version %)
+     #(announce-in-thread-with-served-check! version %)
      (jira/discord-threads
       version
       project))))
 
 (defn
   announce-in-log-thread
-  [version]
+  [{:keys [version store]}]
   (discord/message
    (get-in config [:discord :log-channel])
    {:content
     (format
-     "Announced on all stores: %s"
+     "Announced: %s %s"
+     store
      version)}))
 
 (defn bot-log-msgs []
@@ -118,26 +143,36 @@
 
 (defn parse-version [msg]
   (when-let
-      [[_ version]
+      [[_ store version]
        (re-find
-        #"Announced on all stores: ([\d\.]+)"
+        #"Announced: (\w+) ([\d\.]+)"
         msg)]
-      version))
+    [store version]))
 
 (defn announced-versions [msgs]
-    (into
-     #{}
-     (comp
-      (keep :content)
-      (keep parse-version))
-     msgs))
+  (into
+   #{}
+   (comp
+    (keep :content)
+    (keep parse-version))
+   msgs))
 
 (defn
   announced?
-  [version]
-  ((announced-versions
-    (bot-log-msgs))
-   version))
+  [{:keys [version store]}]
+  (if
+      store
+      ((announced-versions
+        (bot-log-msgs))
+       [store version])
+      (>
+       (count
+        ((group-by
+          second
+          (announced-versions
+           (bot-log-msgs)))
+         version))
+       1)))
 
 (defn
   BotAnnounceLambda
@@ -151,27 +186,23 @@
         (get-in
          config
          [:support-bot :token])))
-      (let
-          [payload
-           (edn/read-string
-            (:body event))
-           d (:cos-version/release payload)]
-          (announce-in-public-thread d)
-          (when (:all-released? d)
-            (announce-to-ticket-creators
-             (:version d)))
-          (hr/text "Success."))
+      (let [payload (edn/read-string (:body event))
+            d (doto
+                  (:cos-version/release payload)
+                  prn)]
+        (when-not
+            (announced? d)
+            (announce-in-public-thread d)
+            (announce-in-log-thread d))
+        (when
+            (announced?
+             (select-keys d [:version]))
+            (announce-to-ticket-creators d))
+        (hr/text "Success."))
       (hr/not-found "Token invalid")))
-
 
 ;; jira status --
 
-(defn thread-served?
-  "Return true when our bot already put a fix message in `thread`."
-  [thread]
-  (seq
-   (discord/fix-msgs
-    (discord/messages thread))))
 
 (defn parse-discord [field]
   (and field
@@ -193,16 +224,14 @@
     (when
         (and
          fix-version
-         (not (thread-served? thread))
-         (announced? fix-version))
-        (announce-in-thread fix-version thread))))
+         (announced? {:version fix-version}))
+        (announce-in-thread-with-served-check! fix-version thread))))
 
 (defn
   JiraStatusLambda
   ""
   [{:keys [event ctx]
      :as request}]
-  (prn request)
   (if
       (=
        (get-in event [:queryStringParameters :sgtoken])
@@ -236,12 +265,8 @@
   (announced-versions
    (bot-log-msgs))
 
-  (announced? "1337")
 
-  (announce-in-log-thread "1337")
-  (announce-in-log-thread "26.0.1")
-
-  (announce-in-thread "1337" "902167426249146398")
+  (announce-in-thread-with-served-check! "1337" "902167426249146398")
 
   (def jira-payload (edn/read-string (slurp "/tmp/spb.edn")))
   (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn")))
@@ -265,6 +290,12 @@
   (announce-in-public-thread
    (:cos-version/release payload))
 
+
+  (thread-served? "904070992249384990")
+
+
+  (:all-released? (:cos-version/release jira-payload))
+
   (announce-in-public-thread
    {:version "fo" :store "Appstore"})
 
@@ -274,13 +305,39 @@
    {:version "fo" :store "iOS"})
 
   (announce-to-ticket-creators "26.0.0")
+  (announce-to-ticket-creators "1.70")
 
   (let [project "BEN" version "26.0.0"]
     (announce-to-ticket-creators version project))
 
 
-  (def ben-9-thread "902167426249146398")
+  (def ben-9-thread "904060721682325545")
+  (announce-in-thread-with-served-check! "1.1" ben-9-thread)
+  (thread-served? ben-9-thread)
+
   (not (thread-served? ben-9-thread))
+
+  (announce-in-log-thread
+   "iOS"
+   "1.70")
+
+  (announce-in-log-thread
+   {:version "1.70"
+    :store "Android"})
+
+  (announced?
+   {:version "1.70"
+    :store "Android"})
+
+  (announced? {:version "1.1" :store "Android"})
+
+  (let [version "1.70"]
+    ((announced-versions (bot-log-msgs)) version)
+    ;; (>
+    ;;  (count ((announced-versions (bot-log-msgs)) version))
+    ;;  1)
+    )
+
 
 
   (def req
