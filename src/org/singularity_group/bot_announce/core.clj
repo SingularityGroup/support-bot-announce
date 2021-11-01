@@ -51,27 +51,30 @@
    (take n)
    str/join))
 
+(defn announce-msg [{:keys [store version]}]
+  {:content
+   (format
+    (str "%s New version %s has been published on the %s"
+         "\nIf you cannot see the update please "
+         "wait at least 2 hours or try clearing cache of your store app. ")
+    (emojis 1)
+    version
+    (if (= "iOS" store)
+      "iOS Appstore :green_apple:"
+      "Android Playstore :robot:"))})
 (defn
-  announce-in-public-thread
-  [{:keys [store version]}]
-  (let
-      [channel
-       (get-in
-        config
-        [:discord
-         :announce-thread])]
-    (discord/message
-     channel
-     {:content
-      (format
-       (str "%s New version %s has been published on the %s"
-            "\nIf you cannot see the update please "
-            "wait at least 2 hours or try clearing cache of your store app. ")
-       (emojis 1)
-       version
-       (if (= "iOS" store)
-         "iOS Appstore :green_apple:"
-         "Android Playstore :robot:"))})))
+  announce-in-public-threads
+  [opts]
+  (let [msg (announce-msg opts)]
+    (doseq
+        [channel
+         (get-in
+          config
+          [:discord
+           :announce-threads])]
+        (discord/message
+         channel
+         msg))))
 
 (defn announce-in-thread-with-served-check!
   "Put verion fix-version message in `thread`."
@@ -165,7 +168,7 @@
                   prn)]
         (when-not
             (announced? d)
-            (announce-in-public-thread d)
+            (announce-in-public-threads d)
             (announce-in-log-thread d))
         (when
             (announced?
@@ -251,6 +254,6 @@
                                      [{:name "26.0.1"}]))
 
 
-  (announce-in-public-thread
+  (announce-in-public-threads
    {:version "fo" :store "iOS"})
   (announce-to-ticket-creators "1.70"))
