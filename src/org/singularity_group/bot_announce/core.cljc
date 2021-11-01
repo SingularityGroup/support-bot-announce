@@ -22,10 +22,8 @@
       discord]
      [org.singularity-group.bot-announce.jira
       :as
-      jira]
-     [org.singularity-group.bot-announce.util
-      :refer
-      [when-let*]]))
+      jira]))
+
 
 (set! *warn-on-reflection* true)
 
@@ -61,44 +59,19 @@
        (get-in
         config
         [:discord
-         :announce-thread
-         :prod])]
-    (let [ios? (= "iOS" store)]
-      (discord/message
-       channel
-       {:content
-        (format
-         (str "%s New version %s has been published on the %s"
-              "\nIf you cannot see the update please "
-              "wait at least 2 hours or try clearing cache of your store app. ")
-         (emojis 1)
-         version
-         (if ios?
-           "iOS Appstore :green_apple:"
-           "Android Playstore :robot:"))}))))
-(defn
-  announce-in-log-thread
-  [{:keys [store version]}]
-  (let
-      [channel
-       (get-in
-        config
-        [:discord
-         :announce-thread
-         :prod])]
-    (let [ios? (= "iOS" store)]
-      (discord/message
-       channel
-       {:content
-        (format
-         (str "%s New version %s has been published on the %s"
-              "\nIf you cannot see the update please "
-              "wait at least 2 hours or try clearing cache of your store app. ")
-         (emojis 1)
-         version
-         (if ios?
-           "iOS Appstore :green_apple:"
-           "Android Playstore :robot:"))}))))
+         :announce-thread])]
+    (discord/message
+     channel
+     {:content
+      (format
+       (str "%s New version %s has been published on the %s"
+            "\nIf you cannot see the update please "
+            "wait at least 2 hours or try clearing cache of your store app. ")
+       (emojis 1)
+       version
+       (if (= "iOS" store)
+         "iOS Appstore :green_apple:"
+         "Android Playstore :robot:"))})))
 
 (defn announce-in-thread-with-served-check!
   "Put verion fix-version message in `thread`."
@@ -177,7 +150,7 @@
 (defn
   BotAnnounceLambda
   ""
-  [{{:keys [headers] :as event} :event :keys [ctx] :as request}]
+  [{{:keys [headers] :as event} :event}]
   (if
       (and
        headers
@@ -230,8 +203,7 @@
 (defn
   JiraStatusLambda
   ""
-  [{:keys [event ctx]
-     :as request}]
+  [{:keys [event]}]
   (if
       (=
        (get-in event [:queryStringParameters :sgtoken])
@@ -265,7 +237,6 @@
   (announced-versions
    (bot-log-msgs))
 
-
   (announce-in-thread-with-served-check! "1337" "902167426249146398")
 
   (def jira-payload (edn/read-string (slurp "/tmp/spb.edn")))
@@ -280,69 +251,6 @@
                                      [{:name "26.0.1"}]))
 
 
-  (let [d (:cos-version/release payload)
-        d (assoc d :version "1.70")]
-    (announce-in-public-thread d)
-    (when (:all-released? d)
-      (announce-to-ticket-creators
-       (:version d))))
-
-  (announce-in-public-thread
-   (:cos-version/release payload))
-
-
-  (thread-served? "904070992249384990")
-
-
-  (:all-released? (:cos-version/release jira-payload))
-
-  (announce-in-public-thread
-   {:version "fo" :store "Appstore"})
-
-  (announce-in-public-thread
-   {:version "fo" :store "Andrid"})
   (announce-in-public-thread
    {:version "fo" :store "iOS"})
-
-  (announce-to-ticket-creators "26.0.0")
-  (announce-to-ticket-creators "1.70")
-
-  (let [project "BEN" version "26.0.0"]
-    (announce-to-ticket-creators version project))
-
-
-  (def ben-9-thread "904060721682325545")
-  (announce-in-thread-with-served-check! "1.1" ben-9-thread)
-  (thread-served? ben-9-thread)
-
-  (not (thread-served? ben-9-thread))
-
-  (announce-in-log-thread
-   "iOS"
-   "1.70")
-
-  (announce-in-log-thread
-   {:version "1.70"
-    :store "Android"})
-
-  (announced?
-   {:version "1.70"
-    :store "Android"})
-
-  (announced? {:version "1.1" :store "Android"})
-
-  (let [version "1.70"]
-    ((announced-versions (bot-log-msgs)) version)
-    ;; (>
-    ;;  (count ((announced-versions (bot-log-msgs)) version))
-    ;;  1)
-    )
-
-
-
-  (def req
-    {:event {:path "/jira-status", :queryStringParameters {:sgtoken "fo"}}})
-
-  (let [{:keys [event ctx] :as request} req]
-    event
-    (get-in event [:queryStringParameters :sgtoken])))
+  (announce-to-ticket-creators "1.70"))

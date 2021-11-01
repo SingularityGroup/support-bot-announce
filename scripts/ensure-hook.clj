@@ -33,7 +33,7 @@
 (make-hook
  {:url
   (str
-   (get-in config [:jira :status-webhook-url])
+   (get-in config [:lambda-url] "jira-status")
    "?"
    "sgtoken="
    (get-in

@@ -24,8 +24,9 @@
 (defn trigger-announce-hook [store version all?]
   (client/post
    (str
-    "https://f2eg7wtbx6.execute-api.us-east-1.amazonaws.com/prod/slack-announce")
-   {:headers {"x-support-bot-admin-token" (get-in config [:support-bot :token])}
+    "https://f2eg7wtbx6.execute-api.us-east-1.amazonaws.com/prod/slack-announce"
+    (get-in config [:jira :status-webhook-url]))
+   {:headers {"x-suppoRt-bot-admin-token" (get-in config [:support-bot :token])}
     :body
     (prn-str
      (make-version store version all?))}))
