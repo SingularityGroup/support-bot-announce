@@ -114,16 +114,26 @@
 ;;     project)))
 
 
+(defn ticket-transition*
+  [& {:keys [:key transition]}]
+  (merge
+   (req (str "/rest/api/2/issue/" key "/transitions"))
+   {:method :post
+    :body (json/write-str {:transition transition})}))
+
+(defn ticket-transition
+  [& {:as opts}]
+  @(client/request (ticket-transition* opts)))
+
 (defn make-comment [ticket-key content]
   @(client/request
-   (assoc
-    (req (str "/rest/api/2/issue/" ticket-key "/comment"))
-    :body (json/json-str {:body  content})
-    :method :post)))
+    (assoc
+     (req (str "/rest/api/2/issue/" ticket-key "/comment"))
+     :body (json/json-str {:body  content})
+     :method :post)))
 
 (comment
 
-  (count )
   (count (tickets {:project 1 :version "COS"}))
   (count (tickets {:project "BEN" :version "1"}))
 
@@ -131,11 +141,22 @@
 
   (keys ticket)
 
-  (let [{:keys [key]} ticket]
-    key)
+
+  (def trnss @(client/request (req "/rest/api/2/issue/BEN-3/transitions")))
+  (json/read-str  (:body trnss) :key-fn keyword)
+
+  (ticket-transition*
+   {:key "BEN-3"
+    :transition (get-in config [:jira :transition])})
+
+  (ticket-transition
+   {:key "BEN-3"
+    :transition (get-in config [:jira :transition])})
+
 
 
   @(client/request (make-comment "BEN-3" "yea"))
+
 
 
 
