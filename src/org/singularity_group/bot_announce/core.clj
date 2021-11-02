@@ -76,31 +76,37 @@
          channel
          msg))))
 
-(defn announce-in-thread-with-served-check!
+(defn announce-in-thread
   "Put verion fix-version message in `thread`."
   [version thread]
   (println "announce in thread " version thread)
-  (when (not (discord/thread-served? thread))
-    (discord/message
-     thread
-     {:content
-      (format
-       "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-       (emojis 1)
-       version
-       (emojis (inc (rand-int 2))))})))
-
-(defn
-  announce-to-ticket-creators
-  [{:keys [version]}]
-  (let [project (get-in
-                 config
-                 [:jira :project])]
-    (run!
-     #(announce-in-thread-with-served-check! version %)
-     (jira/discord-threads
+  (:id
+   (discord/message
+    thread
+    {:content
+     (format
+      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
+      (emojis 1)
       version
-      project))))
+      (emojis (inc (rand-int 2))))})))
+
+(defn handle-ticket [{:keys [key] :as ticket} version]
+  (if-let [thread
+           (jira/ticket->discord-thread ticket)]
+    (if
+        (announce-in-thread version thread)
+        (do
+          (jira/make-comment
+           key
+           "Messaged user in thread that issue got fixed.")
+          ;; update issue status
+          )
+        (jira/make-comment
+         key
+         "Messaging in thread didn't work. Try assign me again."))
+    (jira/make-comment
+     key
+     "I tried to parse discord url field but did not succeed.")))
 
 (defn
   announce-in-log-thread
@@ -173,7 +179,8 @@
         (when
             (announced?
              (select-keys d [:version]))
-            (announce-to-ticket-creators d))
+            ;; (announce-to-ticket-creators d)
+          )
         (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
@@ -201,7 +208,7 @@
         (and
          fix-version
          (announced? {:version fix-version}))
-        (announce-in-thread-with-served-check! fix-version thread))))
+        (announce-in-thread fix-version thread))))
 
 (defn
   JiraStatusLambda
@@ -240,7 +247,13 @@
   (announced-versions
    (bot-log-msgs))
 
-  (announce-in-thread-with-served-check! "1337" "902167426249146398")
+  (announce-in-thread "1337" "902167426249146398")
+
+
+  (run!
+   #(handle-ticket % "1337")
+   (jira/tickets {:project "BEN" :version "1"}))
+
 
   (def jira-payload (edn/read-string (slurp "/tmp/spb.edn")))
   (def jira-payload (edn/read-string (slurp "/home/benj/repos/clojure/support-bot/example-jira-input.edn")))
@@ -252,6 +265,12 @@
                                      jira-payload
                                      [:fields :fixVersions]
                                      [{:name "26.0.1"}]))
+
+
+
+  (jira/make-comment
+   "BEN-3"
+   "Messaged user in thread that issue got fixed.")
 
 
   (announce-in-public-threads
