@@ -90,6 +90,8 @@
       version
       (emojis (inc (rand-int 2))))})))
 
+(def finish-transition (get-in config [:jira :transition]))
+
 (defn handle-ticket [{:keys [key] :as ticket} version]
   (if-let [thread
            (jira/ticket->discord-thread ticket)]
@@ -99,8 +101,9 @@
           (jira/make-comment
            key
            "Messaged user in thread that issue got fixed.")
-          ;; update issue status
-          )
+          (jira/transition
+           :transition finish-transition
+           ticket))
         (jira/make-comment
          key
          "Messaging in thread didn't work. Try assign me again."))
@@ -155,7 +158,6 @@
            (bot-log-msgs)))
          version))
        1)))
-
 (defn
   BotAnnounceLambda
   ""
@@ -179,13 +181,11 @@
         (when
             (announced?
              (select-keys d [:version]))
-            ;; (announce-to-ticket-creators d)
-          )
+          (announce-to-ticket-creators d))
         (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
 ;; jira status --
-
 
 (defn parse-discord [field]
   (and field
@@ -246,9 +246,7 @@
 (comment
   (announced-versions
    (bot-log-msgs))
-
   (announce-in-thread "1337" "902167426249146398")
-
 
   (run!
    #(handle-ticket % "1337")

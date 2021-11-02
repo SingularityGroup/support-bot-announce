@@ -18,6 +18,9 @@
      :headers {"Content-Type" "application/json"}
      :basic-auth [(:username config) (:token config)]}))
 
+(defn read-resp [{:keys [body]}]
+  (json/read-str body :key-fn keyword))
+
 (defn jql-query [body & {:as opts}]
   (->
    @(client/request
@@ -29,40 +32,6 @@
        (json/write-str body)}))
    :body
    (json/read-str :key-fn keyword)))
-
-
-
-(defn
-  tickets
-  ([project version]
-   (tickets project version nil nil))
-  ;; ([project
-  ;;   version
-  ;;   {:maxResults :total
-  ;;    :startAt :issues}
-  ;;   acc]
-  ;;  (let [issues (concat issues acc)]
-  ;;    (if
-  ;;        (and
-  ;;         total
-  ;;         (>= (count issues) total))
-  ;;      issues
-  ;;      (recur
-  ;;       project
-  ;;       version
-  ;;       (tickets
-  ;;        (jql-query
-  ;;         (str
-  ;;          "project = "
-  ;;          project
-  ;;          " and \"Discord[URL Field]\" is not EMPTY and assignee = currentUser()"
-  ;;          " and fixVersion <= "
-  ;;          version
-  ;;          " order by created DESC")))
-  ;;       issues))))
-  )
-
-;; (concat nil nil)
 
 (defn
   tickets
@@ -87,12 +56,12 @@
               ;; " and fixVersion <= " version
               " order by created DESC")
              :startAt (count res)})]
-        (recur
-         (merge
-          opts
-          {:res (concat res issues)
-           :total total
-           :cnt (inc cnt)}))))))
+          (recur
+           (merge
+            opts
+            {:res (concat res issues)
+             :total total
+             :cnt (inc cnt)}))))))
 
 (defn ticket->discord-thread
   [{{discord-link :customfield_10046} :fields}]
@@ -105,25 +74,16 @@
          discord-link))]
       thread))
 
-;; (defn
-;;   discord-threads
-;;   [project version]
-;;   (tickets-discord-threads
-;;    (tickets
-;;     version
-;;     project)))
-
-
-(defn ticket-transition*
+(defn transition*
   [& {:keys [:key transition]}]
   (merge
    (req (str "/rest/api/2/issue/" key "/transitions"))
    {:method :post
     :body (json/write-str {:transition transition})}))
 
-(defn ticket-transition
+(defn transition
   [& {:as opts}]
-  @(client/request (ticket-transition* opts)))
+  @(client/request (transition* opts)))
 
 (defn make-comment [ticket-key content]
   @(client/request
@@ -131,6 +91,29 @@
      (req (str "/rest/api/2/issue/" ticket-key "/comment"))
      :body (json/json-str {:body  content})
      :method :post)))
+
+(defn
+  versions*
+  []
+  (read-resp
+   @(client/request
+     (req
+      (format
+       "/rest/api/latest/project/%s/versions"
+       (get-in
+        config
+        [:jira :project]))))))
+
+(def versions (memoize versions*))
+
+(defn released? [version]
+  ((into
+    #{}
+    (comp
+     (filter :released)
+     (keep :name))
+    (versions))
+   version))
 
 (comment
 
@@ -145,32 +128,18 @@
   (def trnss @(client/request (req "/rest/api/2/issue/BEN-3/transitions")))
   (json/read-str  (:body trnss) :key-fn keyword)
 
-  (ticket-transition*
+  (transition*
    {:key "BEN-3"
     :transition (get-in config [:jira :transition])})
 
-  (ticket-transition
+  (transition
    {:key "BEN-3"
     :transition (get-in config [:jira :transition])})
 
-
+  (released? "1.78")
 
   @(client/request (make-comment "BEN-3" "yea"))
 
 
-
-
-  (:startAt
-   (->
-    (:body
-     @(client/request
-       (let [project "COS"]
-         (jql-query
-          (str
-           "project = " project
-           " and \"Discord[URL Field]\" is not EMPTY"
-           " order by created DESC")
-          :query-params {:startAt 2}))))
-    (json/read-str :key-fn keyword)))
 
   (tickets-discord-threads issues))
