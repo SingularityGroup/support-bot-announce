@@ -6,9 +6,7 @@
   (merge-with merge
               (edn/read-string
                (slurp
-                (io/resource "tokens.edn")))
-              (edn/read-string
-               (slurp (io/resource "config.edn")))))
+                (io/resource "tokens.edn")))))
 
 (defn req [url]
   (let [config (:jira config)]
@@ -21,8 +19,7 @@
   (let [hook
         (assoc
          opts
-         ;; :name "support-bot-status"
-         :name "support-bot-status-1"
+         :name "support-bot-status"
          :events ["jira:issue_updated"]
          :excludeBody false)]
     @(-> (req
@@ -41,18 +38,10 @@
     [:jira :hook-token]))
   :filters
   {:issue-related-events-section
-   "resolution is not EMPTY and Project = BEN"}})
-
-(comment (ticket "BEN-2"))
-
-(comment
-  (defn
-    ticket
-    "Fetch ticket with jira api."
-    [id]
-    (let [opts (req
-                (str "/rest/api/3/issue/" id))
-          ticket @(client/request opts)]
-      (json/decode
-       (:body ticket)
-       keyword))))
+   (str
+    "project = " (get-in config [:jira :project])
+    " and resolution is not EMPTY"
+    ;; " and assignee = currentUser()"
+    ;; " and status = WAITING"
+    ;; " and \"Discord[URL Field]\" is not EMPTY"
+    )}})

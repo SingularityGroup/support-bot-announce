@@ -29,15 +29,14 @@
 
 (make-hook
  {:url
-  "https://big-impala-38.loca.lt"
-  ;; (str
-  ;;  (get-in config [:lambda-url])
-  ;;  "?"
-  ;;  "sgtoken="
-  ;;  (get-in
-  ;;   config
-  ;;   [:jira :hook-token]))
-  })
+  (str
+   (get-in config [:lambda-url])
+   "jira-version"
+   "?"
+   "sgtoken="
+   (get-in
+    config
+    [:jira :hook-token]))})
 
 (comment (ticket "BEN-2"))
 

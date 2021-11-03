@@ -1,9 +1,6 @@
 (ns
     org.singularity-group.bot-announce.jira
     (:require
-     [fierycod.holy-lambda.agent
-      :as
-      agent]
      [org.httpkit.client :as client]
      [clojure.data.json :as json]
      [org.singularity-group.bot-announce.config
@@ -72,6 +69,11 @@
              :total total
              :cnt (inc cnt)}))))))
 
+(defn
+  ticket->discord-field
+  [{{discord-link :customfield_10046} :fields}]
+  discord-link)
+
 (defn ticket->discord-thread
   [{{discord-link :customfield_10046} :fields}]
   (when-let
@@ -124,6 +126,27 @@
     (versions))
    version))
 
+(defn
+  relevant?
+  [{{:keys
+     [assignee status fixVersions]
+     :as fields} :fields
+    :as issue}]
+  (and
+   (every?
+    fields
+    (get-in
+     config
+     [:jira :required-fields]))
+   (ticket->discord-field issue)
+   (=
+    (:accountId assignee)
+    (get-in
+     config
+     [:jira :my-account-id]))
+   (= (:name status) "WAITING")
+   (some released? (map :name fixVersions))))
+
 (comment
 
   (count (tickets {:project 1 :version "COS"}))
@@ -148,7 +171,6 @@
   (released? "1.78")
 
   @(client/request (make-comment "BEN-3" "yea"))
-
 
   (def projects
     (->

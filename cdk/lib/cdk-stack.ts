@@ -15,6 +15,8 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
       description: "Handle new version releases and jira ticket fixes."
     });
 
+    api.root.addMethod("POST");
+
     const handler = new lambda.Function(this, "SupportBotVersionAnnounceFn", {
       runtime: lambda.Runtime.PROVIDED,
       code: lambda.Code.fromAsset('../.holy-lambda/build/latest.zip'),
@@ -22,7 +24,6 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
     });
 
     const BotAnnounce = new apigateway.LambdaIntegration(handler);
-    api.root.addMethod("POST");
     const announceResource = api.root.addResource("slack-announce", {
       defaultIntegration: BotAnnounce
     })
@@ -40,5 +41,18 @@ export class SupportBotVersionAnnounceStack extends cdk.Stack {
     })
     jiraResource.addMethod("POST", JiraStatusMethod)
 
-  }
+
+    const jiraVersionHandler = new lambda.Function(this, "SupportBotJiraVersionFn", {
+      runtime: lambda.Runtime.PROVIDED,
+      code: lambda.Code.fromAsset('../.holy-lambda/build/latest.zip'),
+      handler: "org.singularity-group.bot-announce.core.JiraVersionLambda",
+    });
+
+    const JiraVersionMethod = new apigateway.LambdaIntegration(jiraVersionHandler);
+    const jiraVersionResource = api.root.addResource("jira-version", {
+      defaultIntegration: JiraVersionMethod
+    })
+    jiraVersionResource.addMethod("POST", JiraVersionMethod)
+
+   }
 }

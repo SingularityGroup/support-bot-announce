@@ -92,7 +92,8 @@
 
 (def finish-transition (get-in config [:jira :transition]))
 
-(defn handle-ticket [{:keys [key] :as ticket} version]
+(defn handle-ticket
+  [{:keys [key] :as ticket} version]
   (if-let [thread
            (jira/ticket->discord-thread ticket)]
     (if
@@ -228,20 +229,10 @@
 
 (defn
   announce-when-released-and-fixed
-  [{{{discord (get-in config [:jira :discord-field])
-      [{fix-version :name}] :fixVersions} :fields} :issue}]
-  (when-let
-      [thread
-       (parse-discord discord)]
-      (println "thread: " thread "fix version: " fix-version)
-      (when
-          (and
-           fix-version
-           (announced?
-            {:version fix-version}))
-          (announce-in-thread
-           fix-version
-           thread))))
+  [{{{[{fix-version :name}] :fixVersions} :fields :as issue} :issue}]
+  (when
+      (jira/relevant? issue)
+      (handle-ticket issue fix-version)))
 ;;
 
 (defn
@@ -320,4 +311,27 @@
 (comment
   (def version-event
     (edn/read-string (slurp "/tmp/jira-event.edn")))
-  (announce-for-version version-event))
+  (announce-for-version version-event)
+
+  (keys version-event)
+
+  (:issue_event_type_name version-event)
+
+  (keys (:fields (:issue version-event)))
+
+  (:assignee (:fields (:issue version-event)))
+
+  (def version-event (update-in
+                      version-event
+                      [:issue :fields :status :name]
+                      (constantly "WAITING")))
+
+  (every?
+   (:fields (:issue version-event))
+   (get-in config [:jira :required-fields]))
+
+  (jira/relevant?
+   (:issue version-event))
+
+  (announce-when-released-and-fixed
+   version-event))
