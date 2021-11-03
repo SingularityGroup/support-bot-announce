@@ -122,9 +122,13 @@
      store
      version)}))
 
-(defn bot-log-msgs []
-    (discord/messages
-      (get-in config [:discord :log-channel])))
+(defn
+  bot-log-msgs
+  []
+  (discord/messages
+   (get-in
+    config
+    [:discord :log-channel])))
 
 (defn parse-version [msg]
   (when-let
@@ -158,6 +162,30 @@
            (bot-log-msgs)))
          version))
        1)))
+
+(defn
+  announce-for-version
+  "Get jira tickets and make announcements.
+  This also ads comments to jira tickets.
+  {:version .. :project ..}
+  Has side effects."
+  [{:keys [version] :as opts}]
+  (when-let
+      [tickets (jira/tickets opts)]
+      (run!
+       #(handle-ticket % version)
+       tickets)))
+
+(defn
+  announce-for-version-1
+  "Like `announce-for-version-1` but parses jira hook data."
+  [{{version-name :name
+     project-id :projectId} :version}]
+  (announce-for-version
+   {:project (jira/project-id->key
+              project-id)
+    :version version-name}))
+
 (defn
   BotAnnounceLambda
   ""
@@ -181,8 +209,9 @@
         (when
             (announced?
              (select-keys d [:version]))
-          ;; (announce-to-ticket-creators d)
-          )
+          (announce-for-version
+           {:project (get-in config [:jira :project])
+            :version (:version d)}))
         (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
@@ -199,33 +228,20 @@
 
 (defn
   announce-when-released-and-fixed
-  [{{{discord (get-in
-               config
-               [:jira :discord-field])
+  [{{{discord (get-in config [:jira :discord-field])
       [{fix-version :name}] :fixVersions} :fields} :issue}]
-  (when-let [thread (parse-discord discord)]
-    (println "thread: " thread "fix version: "  fix-version)
-    (when
-        (and
-         fix-version
-         (announced? {:version fix-version}))
-        (announce-in-thread fix-version thread))))
-
-
-(defn announce-for-version
-  "Get jira tickets and make announcements.
-  This also ads comments to jira tickets.
-  Has side effects."
-  [{{version-name :name project-id :projectId} :version}]
   (when-let
-      [tickets
-       (jira/tickets
-        {:project
-         (jira/project-id->key
-          project-id)
-         :version version-name})]
-    (run! #(handle-ticket % version-name) tickets)))
-
+      [thread
+       (parse-discord discord)]
+      (println "thread: " thread "fix version: " fix-version)
+      (when
+          (and
+           fix-version
+           (announced?
+            {:version fix-version}))
+          (announce-in-thread
+           fix-version
+           thread))))
 ;;
 
 (defn
@@ -261,7 +277,7 @@
 
 (def JiraVersionLambda
   (wrap-jira-parse
-   announce-for-version))
+   announce-for-version-1))
 
 (def JiraStatusLambda
   (wrap-jira-parse
@@ -294,19 +310,12 @@
                                      [:fields :fixVersions]
                                      [{:name "26.0.1"}]))
 
-
-
   (jira/make-comment
    "BEN-3"
    "Messaged user in thread that issue got fixed.")
-
-
   (announce-in-public-threads
    {:version "fo" :store "iOS"})
-  (announce-to-ticket-creators "1.70")
-
-
-  )
+  (announce-to-ticket-creators "1.70"))
 
 (comment
   (def version-event
