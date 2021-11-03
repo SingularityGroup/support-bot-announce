@@ -21,6 +21,9 @@
 (defn read-resp [{:keys [body]}]
   (json/read-str body :key-fn keyword))
 
+(def project-id->key
+  (get-in config [:jira :project-id->key]))
+
 (defn jql-query [body & {:as opts}]
   (->
    @(client/request
@@ -32,6 +35,18 @@
        (json/write-str body)}))
    :body
    (json/read-str :key-fn keyword)))
+
+(defn
+  relevant-issues-jql
+  [project version]
+  (str
+   "project = "
+   project
+   " and assignee = currentUser()"
+   " and status = WAITING"
+   " and \"Discord[URL Field]\" is not EMPTY"
+   " and fixVersion <= " version
+   " order by created DESC"))
 
 (defn
   tickets
@@ -48,13 +63,7 @@
           [{:keys [total issues]}
            (jql-query
             {:jql
-             (str
-              "project = " project
-              " and assignee = currentUser()"
-              " and status = WAITING"
-              " and \"Discord[URL Field]\" is not EMPTY"
-              ;; " and fixVersion <= " version
-              " order by created DESC")
+             (relevant-issues-jql project version)
              :startAt (count res)})]
           (recur
            (merge
@@ -75,9 +84,9 @@
       thread))
 
 (defn transition*
-  [& {:keys [:key transition]}]
+  [& {:keys [transition] issue-key :key}]
   (merge
-   (req (str "/rest/api/2/issue/" key "/transitions"))
+   (req (str "/rest/api/2/issue/" issue-key "/transitions"))
    {:method :post
     :body (json/write-str {:transition transition})}))
 
@@ -139,6 +148,14 @@
   (released? "1.78")
 
   @(client/request (make-comment "BEN-3" "yea"))
+
+
+  (def projects
+    (->
+     @(client/request (req "/rest/api/2/project"))
+     :body
+     (json/read-str :key-fn keyword)))
+  (into {} (map (juxt :id :key)) projects)
 
 
 

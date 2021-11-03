@@ -181,7 +181,8 @@
         (when
             (announced?
              (select-keys d [:version]))
-          (announce-to-ticket-creators d))
+          ;; (announce-to-ticket-creators d)
+          )
         (hr/text "Success."))
       (hr/not-found "Token invalid")))
 
@@ -210,36 +211,65 @@
          (announced? {:version fix-version}))
         (announce-in-thread fix-version thread))))
 
+
+(defn announce-for-version
+  "Get jira tickets and make announcements.
+  This also ads comments to jira tickets.
+  Has side effects."
+  [{{version-name :name project-id :projectId} :version}]
+  (when-let
+      [tickets
+       (jira/tickets
+        {:project
+         (jira/project-id->key
+          project-id)
+         :version version-name})]
+    (run! #(handle-ticket % version-name) tickets)))
+
+;;
+
 (defn
-  JiraStatusLambda
-  ""
+  jira-payload
   [{:keys [event]}]
-  (if
+  (when
       (=
-       (get-in event [:queryStringParameters :sgtoken])
+       (get-in
+        event
+        [:queryStringParameters
+         :sgtoken])
        (get-in
         config
         [:jira :hook-token]))
-      (let [payload (json/read-str
-                     (:body event)
-                     :key-fn
-                     keyword)]
+      (let [payload
+            (json/read-str
+             (:body event)
+             :key-fn
+             keyword)]
         (prn payload "\n")
-        (when
-            (=
-             "jira:issue_updated"
-             (doto
-                 (:webhookEvent payload)
-                 (println " - webhook event")))
-            (announce-when-released-and-fixed
-             payload))
-        (hr/text "ok"))
-      (hr/bad-request
-       "Singularity Group token invalid")))
+        payload)))
+
+(defn
+  wrap-jira-parse
+  [f]
+  (fn
+    [data]
+    (if-let
+        [payload (jira-payload data)]
+        (do (f payload) (hr/text "ok"))
+        (hr/bad-request
+         "Singularity Group token invalid"))))
+
+(def JiraVersionLambda
+  (wrap-jira-parse
+   announce-for-version))
+
+(def JiraStatusLambda
+  (wrap-jira-parse
+   announce-when-released-and-fixed))
 
 ;; end
 
-(h/entrypoint [#'BotAnnounceLambda #'JiraStatusLambda])
+(h/entrypoint [#'BotAnnounceLambda #'JiraStatusLambda #'JiraVersionLambda])
 
 (agent/in-context)
 
@@ -273,4 +303,12 @@
 
   (announce-in-public-threads
    {:version "fo" :store "iOS"})
-  (announce-to-ticket-creators "1.70"))
+  (announce-to-ticket-creators "1.70")
+
+
+  )
+
+(comment
+  (def version-event
+    (edn/read-string (slurp "/tmp/jira-event.edn")))
+  (announce-for-version version-event))

@@ -6,6 +6,7 @@
 (require '[clojure.edn :as edn])
 (require '[org.httpkit.client :as client])
 
+
 (def config
   (merge-with merge
               (edn/read-string
