@@ -30,7 +30,8 @@
 (make-hook
  {:url
   (str
-   (get-in config [:lambda-url] "jira-status")
+   (get-in config [:lambda-url])
+   "jira-status"
    "?"
    "sgtoken="
    (get-in
@@ -40,8 +41,18 @@
   {:issue-related-events-section
    (str
     "project = " (get-in config [:jira :project])
-    " and resolution is not EMPTY"
+    ;; " and resolution is not EMPTY"
     ;; " and assignee = currentUser()"
     ;; " and status = WAITING"
     ;; " and \"Discord[URL Field]\" is not EMPTY"
     )}})
+
+
+(comment
+
+  (curl/post
+   "https://f2eg7wtbx6.execute-api.us-east-1.amazonaws.com/prod/jira-status?sgtoken=S_HP37yM5TL-HKbpFzrBa87Vq8DQOjz0PJlimOIb-5Q"
+
+   )
+
+  )
