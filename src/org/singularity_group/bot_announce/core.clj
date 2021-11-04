@@ -171,11 +171,9 @@
   {:version .. :project ..}
   Has side effects."
   [{:keys [version] :as opts}]
-  (when-let
-      [tickets (jira/tickets opts)]
-      (run!
-       #(handle-ticket % version)
-       tickets)))
+  (run!
+   #(handle-ticket % version)
+   (jira/tickets opts)))
 
 (defn
   announce-for-version-1
