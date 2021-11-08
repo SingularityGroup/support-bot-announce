@@ -205,19 +205,22 @@
 (defn
   jira-payload
   [{:keys [event]}]
-  (when
-      (=
-       (get-in
-        event
-        [:queryStringParameters
-         :sgtoken])
-       (get-in
-        config
-        [:jira :hook-token]))
-      (json/read-str
-       (:body event)
-       :key-fn
-       keyword)))
+  (prn event)
+  (try
+    (when
+        (=
+         (get-in
+          event
+          [:queryStringParameters
+           :sgtoken])
+         (get-in
+          config
+          [:jira :hook-token]))
+        (json/read-str
+         (:body event)
+         :key-fn
+         keyword))
+    (catch Exception e (println "Exception: " e))))
 
 (defn
   wrap-jira-parse
