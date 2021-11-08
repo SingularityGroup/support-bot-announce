@@ -145,7 +145,9 @@
      config
      [:jira :my-account-id]))
    (= (:name status) "WAITING")
-   (some released? (map :name fixVersions))))
+   (some
+    released?
+    (map :name fixVersions))))
 
 (comment
 

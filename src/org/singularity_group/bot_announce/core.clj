@@ -197,11 +197,10 @@
 
 (defn
   announce-when-released-and-fixed
-  [{{{[{fix-version :name}] :fixVersions} :fields :as issue} :issue}]
+  [{{[{fix-version :name}] :fixVersions} :fields :as issue}]
   (when
       (jira/relevant? issue)
       (handle-ticket issue fix-version)))
-;;
 
 (defn
   jira-payload
@@ -215,13 +214,10 @@
        (get-in
         config
         [:jira :hook-token]))
-      (let [payload
-            (json/read-str
-             (:body event)
-             :key-fn
-             keyword)]
-        (prn payload "\n")
-        payload)))
+      (json/read-str
+       (:body event)
+       :key-fn
+       keyword)))
 
 (defn
   wrap-jira-parse
@@ -277,31 +273,11 @@
   (announce-to-ticket-creators "1.70"))
 
 (comment
-  (def version-event
+  (def event
     (edn/read-string (slurp "/tmp/jira-event.edn")))
-  (announce-for-version version-event)
 
-  (keys version-event)
+  (announce-when-released-and-fixed event)
+  (jira/relevant? event)
 
-  (:issue_event_type_name version-event)
-
-  (keys (:fields (:issue version-event)))
-
-  (:assignee (:fields (:issue version-event)))
-
-  (def version-event (update-in
-                      version-event
-                      [:issue :fields :status :name]
-                      (constantly "WAITING")))
-
-  (every?
-   (:fields (:issue version-event))
-   (get-in config [:jira :required-fields]))
-
-  (jira/relevant?
-   (:issue version-event))
-
-  (announce-in-thread "1.1" "906896254380941332")
-
-  (announce-when-released-and-fixed
-   version-event))
+  (announce-in-thread "2.11" "906960276052643840")
+  (announce-in-thread "1.1" "906896254380941332"))
