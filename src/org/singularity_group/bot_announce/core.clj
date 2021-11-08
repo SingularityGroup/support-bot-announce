@@ -1,10 +1,8 @@
 (ns
     org.singularity-group.bot-announce.core
-    (:gen-class)
     (:require
      [clojure.edn :as edn]
      [clojure.data.json :as json]
-     [clojure.string :as str]
      [fierycod.holy-lambda.response
       :as
       hr]
@@ -19,37 +17,12 @@
       [config]]
      [org.singularity-group.bot-announce.discord
       :as
-      discord]
-     [org.singularity-group.bot-announce.jira
-      :as
-      jira]))
+      discord :refer [emojis]]
+     [org.singularity-group.bot-announce.jira :as jira])
+    (:gen-class))
 
 
 (set! *warn-on-reflection* true)
-
-(def emoji-happy-girl
-  (discord/mention-emoji
-   {:name "VoHiYo", :id "586548388829593611"}))
-
-(def emoji-gold-chest
-  (discord/mention-emoji
-   {:name "DankLoot", :id "586215241046556672"}))
-
-(def emoji-star
-  (discord/mention-emoji
-   {:name "OneStar", :id "585532547522625546"}))
-
-(def emoji-vote-up
-  (discord/mention-emoji
-   {:name "VoteUp" , :id "585532001646280734"}))
-
-(defn emojis [n]
-  (->>
-   [emoji-gold-chest emoji-happy-girl emoji-star emoji-vote-up]
-   cycle
-   (random-sample 0.20)
-   (take n)
-   str/join))
 
 (defn announce-msg [{:keys [store version]}]
   {:content
@@ -84,11 +57,8 @@
    (discord/message
     thread
     {:content
-     (format
-      "%sThis issue has been fixed on version %s. %s Please update via the store and reply back if you still have problems."
-      (emojis 1)
-      version
-      (emojis (inc (rand-int 2))))})))
+     (discord/message-for-announce
+      thread version)})))
 
 (def finish-transition (get-in config [:jira :transition]))
 
@@ -330,6 +300,8 @@
 
   (jira/relevant?
    (:issue version-event))
+
+  (announce-in-thread "1.1" "906896254380941332")
 
   (announce-when-released-and-fixed
    version-event))
