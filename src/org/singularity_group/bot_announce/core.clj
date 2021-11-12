@@ -205,7 +205,6 @@
 (defn
   jira-payload
   [{:keys [event]}]
-  (prn event)
   (try
     (when
         (=
@@ -278,6 +277,14 @@
 (comment
   (def event
     (edn/read-string (slurp "/tmp/jira-event.edn")))
+  (def event
+    (edn/read-string (slurp "/tmp/tkt.edn")))
+
+  (announce-when-released-and-fixed
+   (jira-payload {:event event}))
+
+
+  (jira/relevant? (jira-payload {:event event}))
 
   (announce-when-released-and-fixed event)
   (jira/relevant? event)

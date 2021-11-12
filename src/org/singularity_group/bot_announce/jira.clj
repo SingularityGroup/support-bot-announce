@@ -105,52 +105,58 @@
 
 (defn
   versions*
-  []
+  [project]
   (read-resp
    @(client/request
      (req
       (format
        "/rest/api/latest/project/%s/versions"
-       (get-in
-        config
-        [:jira :project]))))))
+       project)))))
 
 (def versions (memoize versions*))
 
-(defn released? [version]
+(defn released? [version project]
+  (prn 'released? version  project)
   ((into
     #{}
     (comp
      (filter :released)
      (keep :name))
-    (versions))
+    (versions project))
    version))
 
 (defn
   relevant?
   [{{:keys
      [assignee status fixVersions]
+     {project :key} :project
      :as fields} :fields
     :as issue}]
-  (and
-   (every?
-    fields
-    (get-in
-     config
-     [:jira :required-fields]))
-   (ticket->discord-field issue)
-   (=
-    (:accountId assignee)
-    (get-in
-     config
-     [:jira :my-account-id]))
-   (= (:name status) "WAITING")
-   (some
-    released?
-    (map :name fixVersions))))
+  (doto
+      (and
+       (every?
+        fields
+        (get-in
+         config
+         [:jira :required-fields]))
+       (ticket->discord-field issue)
+       (=
+        (:accountId assignee)
+        (get-in
+         config
+         [:jira :my-account-id]))
+       (= (:name status) "WAITING")
+       (seq
+        (into
+         []
+         (comp
+          (map :name)
+          (keep #(released? % project)))
+         fixVersions)))
+      (println
+       " - relevant? " (:key issue) " " project)))
 
 (comment
-
   (count (tickets {:project 1 :version "COS"}))
   (count (tickets {:project "BEN" :version "1"}))
 
@@ -158,6 +164,18 @@
 
   (keys ticket)
 
+  (seq
+   (into
+    []
+    (comp
+     (map :name)
+     (keep #(released? % "COS")))
+    [{:self
+      "https://singularitygroup.atlassian.net/rest/api/3/version/10065",
+      :id "10065",
+      :name "40.0.1",
+      :archived false,
+      :released false}]))
 
   (def trnss @(client/request (req "/rest/api/2/issue/BEN-3/transitions")))
   (json/read-str  (:body trnss) :key-fn keyword)
@@ -180,7 +198,6 @@
      :body
      (json/read-str :key-fn keyword)))
   (into {} (map (juxt :id :key)) projects)
-
 
 
   (tickets-discord-threads issues))

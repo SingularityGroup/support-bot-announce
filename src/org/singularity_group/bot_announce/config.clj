@@ -4,8 +4,7 @@
    [clojure.java.io :as io]
    [clojure.walk :as walk]))
 
-;; (def version :prod)
-(def version :dev)
+(def version :prod)
 
 (defn
   pull-up

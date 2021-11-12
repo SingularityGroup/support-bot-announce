@@ -74,9 +74,10 @@
                 opts
                 :headers
                 {"Content-Type" "application/json"
-                 "Authorization" (str
-                                  "Bot "
-                                  (:discord-bot-token config))}
+                 "Authorization"
+                 (str
+                  "Bot "
+                  (:discord-bot-token config))}
                 :url
                 (str
                  "https://discord.com/api"
@@ -279,4 +280,36 @@
    thread-members)
 
   (message-for-announce archived "fo")
-  (message-for-announce channel-id "fo"))
+  (message-for-announce channel-id "fo")
+
+  (def
+    my-webhook
+    (let [channel
+          ;;
+          ;; "893184019318071346"
+                                        ;testspam
+          ;; general
+"452486349862469654"
+          ;; in test guild
+          ;; "888832288459194443"
+          ;;
+          ]
+      (rest-api
+       (str
+        "/channels/"
+        channel
+        "/webhooks")
+       {:method :post
+        :body
+        (json/write-str
+         {:name "exporttest"})})))
+
+  (def chans
+    (rest-api
+     (str "/guilds/" "452486349862469652" "/channels")))
+
+  (into
+   []
+   (comp (keep (juxt :id :name)))
+   chans)
+)
