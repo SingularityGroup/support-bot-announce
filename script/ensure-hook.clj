@@ -50,9 +50,4 @@
 
 (comment
 
-  (curl/post
-   "https://f2eg7wtbx6.execute-api.us-east-1.amazonaws.com/prod/jira-status?sgtoken=S_HP37yM5TL-HKbpFzrBa87Vq8DQOjz0PJlimOIb-5Q"
-
-   )
-
   )
